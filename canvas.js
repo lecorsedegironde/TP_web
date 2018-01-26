@@ -1,5 +1,4 @@
-var posX = 0, posY = 0, offsetX = 0, offsetY = 0;
-var disp = false;
+var posX = 0, posY = 0, destX = 0, destY = 0;
 
 window.onload = function () {
     //On récupère le canvas pour pouvoir dessiner dedans
@@ -23,28 +22,29 @@ window.onload = function () {
     canvas.height = 365;
 
     //Chargement de l'image
-    var coinImage = new Image();
-    coinImage.src = "coin-sprite-animation.png";
+    var heroImage = new Image();
+    heroImage.src = "hero_walk_cycle_spritesheet_by_mrnoobtastic-d3defej.png";
 
-    var coinSprite = sprite({
+    var heroSprite = sprite({
         context: context,
-        width: 100,
-        height: 100,
-        image: coinImage,
-        ticksPerFrame: 2,
-        numberOfFrames: 10
+        width: 128,
+        height: 128,
+        image: heroImage,
+        ticksPerFrame: 4,
+        numberOfFrames: 4
     });
+    heroSprite.setIdle();
 
     function updateGame() {
         //Mise à jour du sprite
-        coinSprite.update();
+        heroSprite.update();
     }
 
     function drawGame() {
         //On vide l'écran
         context.clearRect(0, 0, canvas.width, canvas.height);
         //On rend l'image
-        coinSprite.render();
+        heroSprite.render();
     }
 
     var mainloop = function () {
@@ -62,36 +62,9 @@ window.onload = function () {
     };
 
     canvas.onmousedown = function (e) {
-        if ((e.clientX >= posX && e.clientX <= posX + coinSprite.width)
-            && (e.clientY >= posY && e.clientY <= posY + coinSprite.height)) {
-            disp = true;
-            offsetX = posX - e.clientX;
-            offsetY = posY - e.clientY;
-        }
-    };
-
-    canvas.onmouseup = function () {
-        disp = false;
-    };
-
-    canvas.onmousemove = function (e) {
-        if (disp === true) {
-            posX = e.clientX;
-            posY = e.clientY;
-
-            posX += offsetX;
-            posY += offsetY;
-
-            if (posX <= 0) posX = 0;
-            if (posY <= 0) posY = 0;
-            if (posX >= canvas.width - coinSprite.width) posX = canvas.width - coinSprite.width;
-            if (posY >= canvas.height - coinSprite.height) posY = canvas.height - coinSprite.height;
-
-        }
-    };
-
-    canvas.onmouseleave = function () {
-        disp = false;
+        destX = e.clientX;
+        destY = e.clientY;
+        heroSprite.setMovement();
     };
 
     // start the mainloop
@@ -102,8 +75,10 @@ function sprite(options) {
     var that = {},
         frameIndex = 0,
         tickCount = 0,
+        direction = 2,
         ticksPerFrame = options.ticksPerFrame || 0,
-        numberOfFrames = options.numberOfFrames || 1;
+        numberOfFrames = options.numberOfFrames || 1,
+        idle = true;
 
     that.context = options.context;
     that.width = options.width;
@@ -113,20 +88,51 @@ function sprite(options) {
     //Mettre à jour le sprite
     that.update = function () {
 
-        //On augmente le compteur de mises à jour
-        tickCount += 1;
+        if (!idle) {
+            //Mise à jour du mouvement
+            if (posY + that.height < destY + 10 && posY + that.height > destY - 10) {
+                if (posX + that.width / 2 < destX + 10 && posX + that.width / 2 > destX - 10) {
+                    that.setIdle();
+                } else if (posX + that.width / 2 > destX - 10) {
+                    posX -= 10;
+                    direction = 0;
+                } else if (posX + that.width / 2 < destX + 10) {
+                    posX += 10;
+                    direction = 1;
+                }
+            } else if (posY + that.height > destY - 10) {
+                posY -= 10;
+                direction = 3;
+            } else if (posY + that.height < destY + 10) {
+                posY += 10;
+                direction = 2;
+            }
 
-        //Si on doit passer à la frame suivante
-        if (tickCount > ticksPerFrame) {
-            tickCount = 0;
-            //Si on est pas arrivé au bout de l'animation
-            if (frameIndex < numberOfFrames - 1) {
-                frameIndex += 1;
-            } else {
-                //Sinon on reboucle
-                frameIndex = 0;
+            //On augmente le compteur de mises à jour
+            tickCount += 1;
+
+            //Si on doit passer à la frame suivante
+            if (tickCount > ticksPerFrame) {
+                tickCount = 0;
+                //Si on est pas arrivé au bout de l'animation
+                if (frameIndex < numberOfFrames - 1) {
+                    frameIndex += 1;
+                } else {
+                    //Sinon on reboucle
+                    frameIndex = 0;
+                }
             }
         }
+    };
+
+    that.setIdle = function () {
+        idle = true;
+        direction = 2;
+        frameIndex = 3;
+    };
+
+    that.setMovement = function () {
+        idle = false;
     };
 
     //Dessiner la bonne image
@@ -134,7 +140,7 @@ function sprite(options) {
         that.context.drawImage(
             that.image,
             frameIndex * that.width,
-            0,
+            direction * that.height,
             that.width,
             that.height,
             posX,
