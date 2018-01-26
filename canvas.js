@@ -1,3 +1,6 @@
+var posX = 0, posY = 0, offsetX = 0, offsetY = 0;
+var disp = false;
+
 window.onload = function () {
     //On récupère le canvas pour pouvoir dessiner dedans
     var canvas = document.getElementById("canvas");
@@ -37,7 +40,6 @@ window.onload = function () {
         coinSprite.update();
     }
 
-
     function drawGame() {
         //On vide l'écran
         context.clearRect(0, 0, canvas.width, canvas.height);
@@ -59,6 +61,39 @@ window.onload = function () {
         animFrame(recursiveAnim);
     };
 
+    canvas.onmousedown = function (e) {
+        if ((e.clientX >= posX && e.clientX <= posX + coinSprite.width)
+            && (e.clientY >= posY && e.clientY <= posY + coinSprite.height)) {
+            disp = true;
+            offsetX = posX - e.clientX;
+            offsetY = posY - e.clientY;
+        }
+    };
+
+    canvas.onmouseup = function () {
+        disp = false;
+    };
+
+    canvas.onmousemove = function (e) {
+        if (disp === true) {
+            posX = e.clientX;
+            posY = e.clientY;
+
+            posX += offsetX;
+            posY += offsetY;
+
+            if (posX <= 0) posX = 0;
+            if (posY <= 0) posY = 0;
+            if (posX >= canvas.width - coinSprite.width) posX = canvas.width - coinSprite.width;
+            if (posY >= canvas.height - coinSprite.height) posY = canvas.height - coinSprite.height;
+
+        }
+    };
+
+    canvas.onmouseleave = function () {
+        disp = false;
+    };
+
     // start the mainloop
     animFrame(recursiveAnim);
 };
@@ -77,6 +112,7 @@ function sprite(options) {
 
     //Mettre à jour le sprite
     that.update = function () {
+
         //On augmente le compteur de mises à jour
         tickCount += 1;
 
@@ -101,8 +137,8 @@ function sprite(options) {
             0,
             that.width,
             that.height,
-            0,
-            0,
+            posX,
+            posY,
             that.width,
             that.height);
     };
