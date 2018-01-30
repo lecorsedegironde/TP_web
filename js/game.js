@@ -1,150 +1,210 @@
-var animFrame = window.requestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.mozRequestAnimationFrame    ||
-            window.oRequestAnimationFrame      ||
-            window.msRequestAnimationFrame     ||
-            null;
+window.onload = function () {
+    //On récupère le canvas pour pouvoir dessiner dedans
+    var canvas = document.getElementById("canvas");
 
-//Canvas
-var divArena;
-var canArena;
-var conArena;
-var ArenaWidth = 500;
-var ArenaHeight = 300;
+    if (!canvas) {
+        alert("Impossible de récupérer le canvas");
+        return;
+    }
 
-//Background
-var imgBackground;
-var xBackgroundOffset = 0;
-var xBackgroundSpeed = 1;
-var backgroundWidth = 1782;
-var backgroundHeight = 600;
+    //On récupère maintenant le contexte 2d du canvas
+    var context = canvas.getContext('2d');
 
-///////////////////////////////////
-//Keys
-var keys = {
-    UP: 38,
-    DOWN: 40,
-    SPACE: 32,
-    ENTER: 13
-};
+    if (!context) {
+        alert("Impossible de récupérer le context du canvas");
+        return;
+    }
 
-var keyStatus = {};
+    //Taille canvas
+    canvas.width = 500;
+    canvas.height = 300;
 
-function keyDownHandler(event) {
-    "use strict"; 
-    var keycode = event.keyCode, 
-        key; 
-    for (key in keys) {
-        if (keys[key] === keycode) {
-            keyStatus[keycode] = true;
-            event.preventDefault();
+    //Keys
+    var keys = {
+        UP: 38,
+        DOWN: 40,
+        SPACE: 32,
+        ENTER: 13
+    };
+
+    var keyStatus = {};
+
+    function keyDownHandler(event) {
+        var keycode = event.keyCode,
+            key;
+        for (key in keys) {
+            if (keys[key] == keycode) {
+                keyStatus[keycode] = true;
+                event.preventDefault();
+            }
         }
     }
-}
-function keyUpHandler(event) {
-   var keycode = event.keyCode,
+
+    function keyUpHandler(event) {
+        var keycode = event.keyCode,
             key;
-    for (key in keys) 
-        if (keys[key] === keycode) {
+        for (key in keys)
+            if (keys[key] == keycode) {
+                keyStatus[keycode] = false;
+            }
+
+    }
+
+    window.addEventListener("keydown", keyDownHandler, false);
+    window.addEventListener("keyup", keyUpHandler, false);
+
+    /*** Chargement des assets ***/
+        //Background
+    var imgBackground;
+    var xBackgroundOffset = 0;
+    var xBackgroundSpeed = 1;
+    var backgroundWidth = 1782;
+    var backgroundHeight = 600;
+
+    // Hero Player
+    var imgPlayer = new Image();
+    imgPlayer.src = "assets/Ship/Spritesheet_64x29.png";
+
+    var spritePlayer = sprite({
+        context: context,
+        width: 64,
+        height: 29,
+        image: imgPlayer,
+        x: 20,
+        y: 100,
+        ySpeed: 10,
+        ticksPerFrame: 2,
+        numberOfFrames: 4
+    });
+
+
+    function updateGame() {
+        updateScene();
+        updateItems();
+    }
+
+    function updateScene() {
+        xBackgroundOffset = (xBackgroundOffset - xBackgroundSpeed) % backgroundWidth;
+    }
+
+    function updateItems() {
+        spritePlayer.clearScreen();
+        var keycode;
+        for (keycode in keyStatus) {
+            if (keyStatus[keycode] == true) {
+                if (keycode == keys.UP) {
+                    spritePlayer.up();
+                }
+                if (keycode == keys.DOWN) {
+                    spritePlayer.down();
+                }
+                if (keycode == keys.SPACE) {
+                    //shoot
+                }
+            }
             keyStatus[keycode] = false;
         }
-        
+        spritePlayer.update();
     }
-///////////////////////////////////
 
+    function drawGame() {
+        //On rend le background
+        canvas.style.backgroundPosition = xBackgroundOffset + "px 0px";
+        spritePlayer.render();
+    }
 
+    var mainloop = function () {
+        updateGame();
+        drawGame();
+    };
 
-/////////////////////////////////
-// Hero Player
-var imgPlayer = new Image();
-imgPlayer.src = "./assets/Ship/f1.png";
-var xPlayer = 20;
-var yPlayerSpeed = 10;
-var yPlayer = 100;
-var PlayerHeight = 15;
-var PlayerWidth = 32;
-var PlayerImgHeight = 29;
-var PlayerImgWidth = 64;
-/////////////////////////////////
+    var animFrame = window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        null;
 
+    var recursiveAnim = function () {
+        mainloop();
+        animFrame(recursiveAnim);
+    };
 
+    animFrame(recursiveAnim);
+};
 
-function updateScene() {
-    "use strict"; 
-    xBackgroundOffset = (xBackgroundOffset - xBackgroundSpeed) % backgroundWidth;
-}
-function updateItems() {
-    "use strict"; 
-    clearItems();
-    
-    var keycode;
-    for (keycode in keyStatus) {
-            if(keyStatus[keycode] == true){
-                if(keycode == keys.UP) { 
-                    yPlayer -= yPlayerSpeed;   
-                }
-                if(keycode == keys.DOWN) { 
-                    yPlayer += yPlayerSpeed;   
-                } 
-                if(keycode == keys.Space) { 
-                    //shoot
-                }             
+function sprite(options) {
+    var that = {},
+        frameIndex = 0,
+        tickCount = 0,
+        ticksPerFrame = options.ticksPerFrame || 0,
+        numberOfFrames = options.numberOfFrames || 1;
+
+    that.context = options.context;
+    that.width = options.width;
+    that.height = options.height;
+    that.image = options.image;
+    that.x = options.x || 0;
+    that.y = options.y || 0;
+    that.ySpeed = options.ySpeed || 10;
+
+    //Mettre à jour le sprite
+    that.update = function () {
+
+        //On augmente le compteur de mises à jour
+        tickCount += 1;
+
+        //Si on doit passer à la frame suivante
+        if (tickCount > ticksPerFrame) {
+            tickCount = 0;
+            //Si on est pas arrivé au bout de l'animation
+            if (frameIndex < numberOfFrames - 1) {
+                frameIndex += 1;
+            } else {
+                //Sinon on reboucle
+                frameIndex = 0;
             }
-        keyStatus[keycode] = false;
-    }
-}
-function drawScene() {
-    "use strict"; 
-    canArena.style.backgroundPosition = xBackgroundOffset + "px 0px" ;
-}
-function drawItems() {
-    "use strict"; 
-    conArena.drawImage(imgPlayer, 0,0,PlayerImgWidth,PlayerImgHeight, xPlayer,yPlayer,PlayerWidth,PlayerHeight);
-}
-function clearItems() {
-    "use strict"; 
-    conArena.clearRect(xPlayer,yPlayer,PlayerWidth,PlayerHeight);
-}
+        }
+    };
 
-function updateGame() {
-    "use strict"; 
-    updateScene();
-    updateItems();
-}
+    //Fonctions de déplacement
+    that.up = function () {
+        that.y -= that.ySpeed;
 
-function drawGame() {
-    "use strict"; 
-    drawScene();
-    drawItems();    
-}
+        //Tests pour pas sortir de l'écran
+        if (that.y <= 0) {
+            that.y = 0;
+        }
+    };
 
+    that.down = function () {
+        that.y += that.ySpeed;
 
-function mainloop () {
-    "use strict"; 
-    updateGame();
-    drawGame();
-}
+        //Tests pour pas sortir de l'écran
+        if (that.y + that.height >= 300) {
+            that.y = 300 - that.height;
+        }
+    };
 
-function recursiveAnim () {
-    "use strict"; 
-    mainloop();
-    animFrame( recursiveAnim );
-}
- 
-function init() {
-    "use strict";
-    divArena = document.getElementById("arena");
-    canArena = document.createElement("canvas");
-    canArena.setAttribute("id", "canArena");
-    conArena = canArena.getContext("2d");
-    divArena.appendChild(canArena);
- 
-    
-window.addEventListener("keydown", keyDownHandler, false);
-window.addEventListener("keyup", keyUpHandler, false);
-    
-    animFrame( recursiveAnim );
-    
-}
+    //Dessiner la bonne image
+    that.render = function () {
+        that.context.drawImage(
+            that.image,
+            0,
+            frameIndex * that.height,
+            that.width,
+            that.height,
+            that.x,
+            that.y,
+            that.width,
+            that.height);
+    };
 
-window.addEventListener("load", init, false);
+    //Efface l'écran
+    that.clearScreen = function () {
+        that.context.clearRect(
+            that.x,
+            that.y,
+            that.width,
+            that.height);
+    };
+
+    return that;
+}
