@@ -65,6 +65,10 @@ window.onload = function () {
     var imgPlayer = new Image();
     imgPlayer.src = "assets/Ship/Spritesheet_64x29.png";
 
+    //Shoot img
+    var imgShoot1 = new Image();
+    imgShoot1.src = "assets/Shoot/shoot1.png";
+
     var spritePlayer = sprite({
         context: context,
         width: 64,
@@ -76,6 +80,11 @@ window.onload = function () {
         ticksPerFrame: 2,
         numberOfFrames: 4
     });
+
+    //On créée une liste de sprites pour chaque shoot
+    var shootList = [];
+
+    var enemyList = [];
 
 
     function updateGame() {
@@ -89,28 +98,80 @@ window.onload = function () {
 
     function updateItems() {
         spritePlayer.clearScreen();
+
+        //Copier le tableau afin de le parcourir et de delete les bon éléments
+        var shootListCopy = shootList.slice(0);
+        shootListCopy.forEach(function (shoot) {
+            if (shoot.destroy) {
+                var i = shootList.indexOf(shoot);
+                delete shootList[i];
+                shootList.splice(i, 1);
+            }
+            shoot.clearScreen();
+        });
+
+        //Copier le tableau afin de le parcourir et de delete les bon éléments
+        var enemyListCopy = enemyList.slice(0);
+        enemyListCopy.forEach(function (enemy) {
+            if (enemy.destroy) {
+                var i = enemyList.indexOf(enemy);
+                delete enemyList[i];
+                enemyList.splice(i, 1);
+            }
+            enemy.clearScreen();
+        });
+
         var keycode;
         for (keycode in keyStatus) {
             if (keyStatus[keycode] == true) {
                 if (keycode == keys.UP) {
-                    spritePlayer.up();
+                    spritePlayer.goUp();
                 }
                 if (keycode == keys.DOWN) {
-                    spritePlayer.down();
+                    spritePlayer.goDown();
                 }
                 if (keycode == keys.SPACE) {
-                    //shoot
+                    //Shoot
+                    shootList.push(sprite({
+                        context: context,
+                        width: 21,
+                        height: 20,
+                        image: imgShoot1,
+                        x: spritePlayer.x + (spritePlayer.width / 2),
+                        y: spritePlayer.y,
+                        xSpeed: 10,
+                        ySpeed: 0
+                    }));
                 }
             }
             keyStatus[keycode] = false;
         }
+
         spritePlayer.update();
+
+        //Idem ici
+        shootListCopy = shootList.slice(0);
+        shootListCopy.forEach(function (shoot) {
+            shoot.goRight();
+            shoot.update();
+        });
+
+        //Idem ici
+        enemyListCopy = enemyList.slice(0);
+        enemyListCopy.forEach(function (enemy) {
+            enemy.goRight();
+            enemy.update();
+        });
     }
 
     function drawGame() {
         //On rend le background
         canvas.style.backgroundPosition = xBackgroundOffset + "px 0px";
         spritePlayer.render();
+        //Rendre tous les tirs
+        shootList.forEach(function (shoot) {
+            shoot.render();
+        })
     }
 
     var mainloop = function () {
@@ -143,11 +204,12 @@ function sprite(options) {
     that.image = options.image;
     that.x = options.x || 0;
     that.y = options.y || 0;
+    that.xSpeed = options.xSpeed || 20;
     that.ySpeed = options.ySpeed || 10;
+    that.destroy = false;
 
     //Mettre à jour le sprite
     that.update = function () {
-
         //On augmente le compteur de mises à jour
         tickCount += 1;
 
@@ -165,7 +227,7 @@ function sprite(options) {
     };
 
     //Fonctions de déplacement
-    that.up = function () {
+    that.goUp = function () {
         that.y -= that.ySpeed;
 
         //Tests pour pas sortir de l'écran
@@ -174,7 +236,7 @@ function sprite(options) {
         }
     };
 
-    that.down = function () {
+    that.goDown = function () {
         that.y += that.ySpeed;
 
         //Tests pour pas sortir de l'écran
@@ -182,6 +244,25 @@ function sprite(options) {
             that.y = 300 - that.height;
         }
     };
+
+    that.goLeft = function () {
+        that.x -= that.xSpeed;
+
+        //Tests pour sortir de l'écran
+        if (that.x + that.width <= 0) {
+            that.destroy = true;
+        }
+    };
+
+    that.goRight = function () {
+        that.x += that.xSpeed;
+
+        //Tests pour sortir de l'écran
+        if (that.x + that.width >= 500) {
+            that.destroy = true;
+        }
+    };
+
 
     //Dessiner la bonne image
     that.render = function () {
